@@ -10,12 +10,17 @@ import logging
 logger = logging.getLogger('naus')
 
 def per_step_plan(detectors, motors, actions, *args, log=None, **kwargs):
-    '''execute one step and push result into queue
+    '''execute one step and return detecors readings
+
+    Applies the actions to the motors and reads the detectors.
 
     Args:
-        device : a ophyd (environment) device
-        sink :  an object consuming the return argument
+        detectors: detectors to read from
+        motors:    motors to apply the actions to
+        actions:   keras-rl requested actions
 
+    Returns:
+        the detector readings.
     '''
     if log is None:
         log = logger
@@ -41,10 +46,14 @@ def per_step_plan(detectors, motors, actions, *args, log=None, **kwargs):
 def setup_plan(detectors, motors, *args, log=None, **kwargs):
     '''retrieve the actual status
 
-    Args:
-        device : a ophyd (environment) device
-        sink :  an object consuming the return argument
+    Reads the detectors and returns the state
 
+
+    Args:
+        detectors: detectors to read from
+
+    Motors are passed for convienence if user whichs to
+    use their own plan.
     '''
     if log is None:
         log = logger
@@ -58,8 +67,11 @@ def setup_plan(detectors, motors, *args, log=None, **kwargs):
 
 
 def reset_plan(detectors, state_motors, saved_state,
-               *args, log=None, **kwargs):
+            *args, log=None, **kwargs):
     '''plan to revert environement to orginal state
+
+    Uses :func:`per_step_plan`. Passes the `state_motors`
+    as motors and the `saved_state` as actions.
     '''
     if log is None:
         log = logger
@@ -70,8 +82,8 @@ def reset_plan(detectors, state_motors, saved_state,
     return r
 
 
-def teardown_plan(detectors, motors, actions, state_motors, state_actions, 
-                  *args, log=None, **kwargs):
+def teardown_plan(detectors, motors, actions, state_motors, state_actions,
+                *args, log=None, **kwargs):
     '''Typically: nothing to do
 
     Args:
@@ -84,6 +96,10 @@ def teardown_plan(detectors, motors, actions, state_motors, state_actions,
 
 
 class EnvironmentState(super_state_machine.machines.StateMachine):
+    '''State the environment is currently in.
+
+    Mainly used for cross checking purposes.
+    '''
     class States(enum.Enum):
         UNDEFINED = 'undefined'
         SETUP = 'setting_up'
@@ -111,9 +127,50 @@ class EnvironmentState(super_state_machine.machines.StateMachine):
 class Environment:
     '''OpenAI enviroment emmitting bluesky plans for real measurements
 
-    The device has to have the same signature as the device
-        :class:`bact2.ophyd.utils.environement.`
+    Args:
+        detectors :    detectors to use in the plan
+        motors :       motors (or actuators) to use in each step.
+                    (see also argument per_step_plan)
+        state_motors : motors (or actuators) to reset the state to
+                    the original state (see reset_plan)
 
+    It uses the motors to execute the actions requested. At each
+    step it hands the motors and detectors to the per_step plan.
+    From the retrieved documents reward and terminus have to be
+    extracted (see apprpriate methods which have to be
+    overloaded below).
+
+    Every time an epoc shall be reset, the reset_plan is
+    executed. Appropriate methods are provided for defining this
+    state and passing it to the reset_plan.
+
+    Furthermore a tear_down plan can be provided. This can be used
+    for shutting off any devices at the end in a controlled
+    fashion.
+
+    A user has to derive its own environement by overloading the
+    following methods:
+
+    * :meth:`storeInitialState`: this shall store the state the
+      environement shall be reset for every epoc. When a reset is
+      requested, the reset_plan is executed. This defaults to
+      :func:`reset_plan`. It will be passed the declared detectors
+      and motors.
+
+    * :meth:`getStateToResetTo`: this shall provede the info of
+      the reset state. ITs return value will be handed over to
+      :func:`reset_plan` as `saved_state` argument.
+
+    * :meth:`computeState`: It gets the information acquired
+      during the per_step_plan. This method needs to extract the
+      values as required by keras-rl.
+
+    * :meth:`computeRewardTerminal`: This is called after each
+      step. It must return the reward of the last step and if the
+      epoc has terminated.
+
+    Finally the user has to assign a
+    :class:`bcib.CallbackIteratorBridge` to the .bridge attribute.
     '''
     def __init__(self, *, detectors, motors, state_motors, log=None,
                 per_step_plan=per_step_plan,
@@ -186,11 +243,11 @@ class Environment:
 
         Args:
             dic : a dictionary passed back by the sink of the
-                  per_step_plan
+                per_step_plan
 
         Returns:
             state: current state to be returned to OpenAI
-                   typically a vector of floats.
+                typically a vector of floats.
 
         If the default per_step_plan is used dic will contain the
         data read back from all detectors
@@ -215,6 +272,7 @@ class Environment:
         If the default per_step_plan is used dic will contain the
         data read back from all detectors
         '''
+        cls_name = self.__class__.__name__
         m_name = 'computeRewardTerminal'
         raise NotImplementedError(f'{cls_name}.{m_name} implement in derived class')
 
@@ -239,7 +297,7 @@ class Environment:
 
         '''
         self.state.set_setting_up()
-        cmd = functools.partial(self.setup_plan, self.detectors, self.motors, 
+        cmd = functools.partial(self.setup_plan, self.detectors, self.motors,
                                 self.user_args, self.user_kwargs)
         cls_name = self.__class__.__name__
         self.log.debug(f'{cls_name}.setup: submitting command {cmd}')
@@ -287,13 +345,13 @@ class Environment:
         lm = len(self.motors)
         try:
             if lm == 1:
-               # Should be float compatible
-               float(actions)
-               actions = [actions]
+                # Should be float compatible
+                float(actions)
+                actions = [actions]
 
             l = len(actions)
             lm = len(self.motors)
-            
+
             if l != lm:
                 txt = (
                     f'At each step I expect {lm} = number of motors actions'
@@ -374,7 +432,7 @@ class Environment:
         except Exception:
             self.state.set_failed()
             self._bridge.stopDelegation()
-            raise 
+            raise
         return r
 
     @property
@@ -393,6 +451,3 @@ class Environment:
     def clearLinkToBridge(self):
         self.log.info(f'Clearing link to bridge {self._bridge}')
         self._bridge = None
-
-
-

@@ -14,8 +14,10 @@ def run_environement(env, partial, md=None, log=None, n_loops=1):
     '''Plan for executing environement.
 
     Args:
-        env : a instanance of a subclass of :class:Environment
-        n_loops : if negative run for ever
+        env : a instanance of a subclass of
+              :class:`naus.environment.Environment`
+        n_loops : number of times to execute.
+                  if negative run for ever
 
     This plan expects that env is used as an environement in an
     OpenAI or keras learning environment.
@@ -103,7 +105,7 @@ def run_environement(env, partial, md=None, log=None, n_loops=1):
                     break
         except Exception:
             log.error(f'run_environement: Failed to execute environment {env}')
-            raise 
+            raise
         finally:
             log.info(f'run_environement: Finishing processing  {env}')
             thread.join()

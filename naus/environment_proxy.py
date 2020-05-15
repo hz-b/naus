@@ -12,7 +12,12 @@ logger = logging.getLogger('naus')
 
 
 class _EnvironmentProxy:
+    '''
 
+    Waring:
+        review if __getattr__ should check for allowable
+        attributes
+    '''
     def __init__(self, receiver, *, log=None):
         self._rec = receiver
         if log is None:
@@ -32,7 +37,10 @@ class _EnvironmentProxy:
 
 
 class EnvironmentProxyForServer(_EnvironmentProxy):
-    '''make method calls return xmlrpc compatible
+    '''Proxy of the environment for the XMLRPC server
+
+    This makes the different method calls, that keras-rl requies
+    compatible with xmlrpc.
     '''
 
     def setup(self, *args, **kwargs):
@@ -51,7 +59,6 @@ class EnvironmentProxyForServer(_EnvironmentProxy):
 
     def reset(self, *args, **kwargs):
         '''
-        
         Sequences to lists
         '''
         r = self._rec.reset(*args, **kwargs)
@@ -78,7 +85,11 @@ class EnvironmentProxyForServer(_EnvironmentProxy):
     #    return r
 
 class EnvironmentProxyForClient(_EnvironmentProxy):
+    '''Proxy of the environment for the XMLRPC client
 
+    This makes the different method calls, that keras-rl requies
+    compatible with xmlrpc.
+    '''
     def seed(self, *args, **kwargs):
         seed = self._rec.seed(*args, **kwargs)
         r = int(seed)
