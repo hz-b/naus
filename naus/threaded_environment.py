@@ -1,8 +1,6 @@
-from bluesky import plan_stubs as bps, preprocessors as bpp
-from bcib import CallbackIteratorBridge
+from bluesky import preprocessors as bpp
 from bcib.threaded_bridge import setup_threaded_callback_iterator_bridge
 from bcib.bridge_plan import bridge_plan_stub
-from queue import Queue
 from threading import Thread
 import logging
 import itertools
@@ -10,44 +8,23 @@ import itertools
 logger = logging.getLogger('bact2')
 
 
-def run_environement(env, partial, md=None, log=None, n_loops=1):
-    '''Plan for executing environement.
+def run_environment(env, partial, md=None, log=None, n_loops=1):
+    '''Plan for executing environment.
 
     Args:
-        env : a instanance of a subclass of
-              :class:`naus.environment.Environment`
+        env :     an instance of a subclass of
+                  :class:`naus.environment.Environment`
         n_loops : number of times to execute.
                   if negative run for ever
 
-    This plan expects that env is used as an environement in an
+    This plan expects that env is used as an environment in an
     OpenAI or keras learning environment.
 
     Warning:
         The learning environment must be executed in an independent
         thread or process.
 
-
-    Typical usage:
-
-    ::
-
-        bridge = setup_threaded_bridge()
-
-        env = Environment(detectors, motors)
-        env.bridge = bridge
-
-        agent = SomeAgent(env)
-        def run():
-           agent.fit()
-           return
-
-        thread = threading.Thread(target=run)
-        tread.start()
-        RE(brige)
-        thread.stop()
     '''
-
-
     if log is None:
         log = logger
 
@@ -60,19 +37,19 @@ def run_environement(env, partial, md=None, log=None, n_loops=1):
     _md = {
         'detectors': [det.name for det in detectors],
         'plan_args': {
-            'environent' : repr(env),
+            'environment': repr(env),
             # All arguments further down should be now in environment
-            'detectors' : list(map(repr, detectors)),
-            'motors' : list(map(repr, motors)),
-            'state_motors' : list(map(repr, state_motors)),
-            'per_step_plan' : repr(env.per_step_plan),
-            'setup_plan' : repr(env.setup_plan),
-            'teardown_plan' : repr(env.teardown_plan),
-            'n_loops' : n_loops,
+            'detectors': list(map(repr, detectors)),
+            'motors': list(map(repr, motors)),
+            'state_motors': list(map(repr, state_motors)),
+            'per_step_plan': repr(env.per_step_plan),
+            'setup_plan': repr(env.setup_plan),
+            'teardown_plan': repr(env.teardown_plan),
+            'n_loops': n_loops,
           },
-        'plan_name' : 'environement_executor',
-        'executor_type' : 'threaded',
-        'hints' : {}
+        'plan_name': 'run_environment',
+        'executor_type': 'threaded',
+        'hints': {}
     }
     _md.update(md or {})
 
@@ -92,22 +69,25 @@ def run_environement(env, partial, md=None, log=None, n_loops=1):
             env.bridge = bridge
             env.bridge
 
-            thread = Thread(target=run_partial, args=[partial], name='run optimiser')
+            thread = Thread(target=run_partial, args=[partial],
+                            name='run optimiser')
             thread.start()
-            log.info(f'run_environement: thread evaluating partial, executing plan')
+            log.info(
+                f'run_environment: thread evaluating partial, executing plan'
+            )
             for cnt in itertools.count():
                 if n_loops < 0 or cnt < n_loops:
-                    log.info(f'run_environement: running loop {cnt}')
+                    log.info(f'run_environment: running loop {cnt}')
                     r = (yield from bridge_plan_stub(bridge, log=log))
-                    log.info(f'run_environement: loop {cnt} returned {r}')
+                    log.info(f'run_environment: loop {cnt} returned {r}')
                 else:
-                    log.info(f'Finshed evaluations after {cnt} loops')
+                    log.info(f'Finished evaluations after {cnt} loops')
                     break
         except Exception:
-            log.error(f'run_environement: Failed to execute environment {env}')
+            log.error(f'run_environment: Failed to execute environment {env}')
             raise
         finally:
-            log.info(f'run_environement: Finishing processing  {env}')
+            log.info(f'run_environment: Finishing processing  {env}')
             thread.join()
             clear_method()
         # thread.join()

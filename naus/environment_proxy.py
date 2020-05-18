@@ -4,10 +4,7 @@ Todo:
     review if xmlrpc is an appropriate choice
 '''
 
-
 import logging
-
-
 logger = logging.getLogger('naus')
 
 
@@ -39,8 +36,8 @@ class _EnvironmentProxy:
 class EnvironmentProxyForServer(_EnvironmentProxy):
     '''Proxy of the environment for the XMLRPC server
 
-    This makes the different method calls, that keras-rl requies
-    compatible with xmlrpc.
+    This makes the different keras-rl callback methods compatible
+    with xmlrpc.
     '''
 
     def setup(self, *args, **kwargs):
@@ -68,7 +65,6 @@ class EnvironmentProxyForServer(_EnvironmentProxy):
 
     def step(self, *args, **kwargs):
         '''
-        
         Sequences to lists
         '''
         r = self._rec.step(*args, **kwargs)
@@ -79,16 +75,17 @@ class EnvironmentProxyForServer(_EnvironmentProxy):
         self.log.debug(f'step returned {r}')
         return r
 
-    #def close(self, *args, **kwargs):
+    # def close(self, *args, **kwargs):
     #    r = self._env.close(*args, **kwargs)
     #    self.log.debug(f'close returned {r}')
     #    return r
 
+
 class EnvironmentProxyForClient(_EnvironmentProxy):
     '''Proxy of the environment for the XMLRPC client
 
-    This makes the different method calls, that keras-rl requies
-    compatible with xmlrpc.
+    This makes the different keras-rl callback methods compatible
+    with xmlrpc.
     '''
     def seed(self, *args, **kwargs):
         seed = self._rec.seed(*args, **kwargs)
@@ -101,9 +98,7 @@ class EnvironmentProxyForClient(_EnvironmentProxy):
     def step(self, actions):
         actions = int(actions)
         return self._rec.step(actions)
-    
+
     def steps_beyond_done(self, *args, **kwargs):
         self.log.debug('Executing steps_beyond_done with {args} {kwargs}')
         return self._rec.steps_beyond_done(*args, **kwargs)
-
-

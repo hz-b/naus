@@ -1,5 +1,10 @@
 '''OpenAI compatible environment
+
+Todo:
+    This module does not need to depend on bluesky if the plans
+    are put in a separate module
 '''
+
 from bluesky import plan_stubs as bps, preprocessors as bpp
 import super_state_machine.machines
 
@@ -8,6 +13,7 @@ import functools
 import enum
 import logging
 logger = logging.getLogger('naus')
+
 
 def per_step_plan(detectors, motors, actions, *args, log=None, **kwargs):
     '''execute one step and return detecors readings
@@ -29,12 +35,12 @@ def per_step_plan(detectors, motors, actions, *args, log=None, **kwargs):
     action = list(actions)
 
     # There should be a func
-    l = []
+    ml = []
     for m, a in zip(motors, action):
-        l.extend([m, a])
-    args = tuple(l)
+        ml.extend([m, a])
+    args = tuple(ml)
 
-    log.debug(f'Executing mv {args}')
+    log.debug(f'Executing move (bps.mv) {args}')
     yield from bps.mv(*args)
 
     r = (yield from bps.trigger_and_read(detectors))
@@ -48,27 +54,25 @@ def setup_plan(detectors, motors, *args, log=None, **kwargs):
 
     Reads the detectors and returns the state
 
-
     Args:
         detectors: detectors to read from
 
-    Motors are passed for convienence if user whichs to
-    use their own plan.
+    Motors are passed for convenience for a user that intends to
+    implement his own plan.
     '''
     if log is None:
         log = logger
 
-
     yield from bps.checkpoint()
     log.info(f'Reading detectors {detectors}')
-    r =  (yield from bps.trigger_and_read(detectors))
+    r = (yield from bps.trigger_and_read(detectors))
     log.info(f'setup returned {r}')
     return r
 
 
-def reset_plan(detectors, state_motors, saved_state,
-            *args, log=None, **kwargs):
-    '''plan to revert environement to orginal state
+def reset_plan(detectors, state_motors, saved_state, *args, log=None,
+               **kwargs):
+    '''plan to revert environment to original state
 
     Uses :func:`per_step_plan`. Passes the `state_motors`
     as motors and the `saved_state` as actions.
@@ -76,18 +80,21 @@ def reset_plan(detectors, state_motors, saved_state,
     if log is None:
         log = logger
 
-    log.info(f'Executing reset plan on {state_motors} and saved_state {saved_state}')
+    log.info(
+        f'Executing reset plan on {state_motors} and saved_state {saved_state}'
+    )
     r = (yield from per_step_plan(detectors, state_motors, saved_state))
     log.info(f'Reset plan read {r}')
     return r
 
 
 def teardown_plan(detectors, motors, actions, state_motors, state_actions,
-                *args, log=None, **kwargs):
+                  *args, log=None, **kwargs):
     '''Typically: nothing to do
 
     Args:
-        detectors: the
+        detectors: the detectors registered to the environment
+
     Todo:
         Consider resetting to original state
     '''
@@ -112,20 +119,20 @@ class EnvironmentState(super_state_machine.machines.StateMachine):
 
     class Meta:
         initial_state = 'undefined'
-        transitions =  {
-            'undefined'    : ['resetting', 'setting_up', 'tearing_down', 'failed'],
-            'setting_up'   : ['initialised', 'tearing_down', 'failed'],
-            'resetting'    : ['initialised', 'tearing_down', 'failed'],
-            'initialised'  : ['stepping',   'done', 'resetting', 'tearing_down', 'failed'],
-            'stepping'     : ['stepping',   'done', 'resetting', 'tearing_down', 'failed'],
-            'done'         : ['setting_up', 'done', 'resetting', 'tearing_down', 'failed'],
-            'tearing_down' : ['undefined', 'failed'],
-            'failed'       : ['undefined', 'resetting', 'tearing_down', 'failed'],
+        transitions = {
+            'undefined':    ['resetting', 'setting_up', 'tearing_down', 'failed'],
+            'setting_up':   ['initialised', 'tearing_down', 'failed'],
+            'resetting':    ['initialised', 'tearing_down', 'failed'],
+            'initialised':  ['stepping',   'done', 'resetting', 'tearing_down', 'failed'],
+            'stepping':     ['stepping',   'done', 'resetting', 'tearing_down', 'failed'],
+            'done':         ['setting_up', 'done', 'resetting', 'tearing_down', 'failed'],
+            'tearing_down': ['undefined', 'failed'],
+            'failed':       ['undefined', 'resetting', 'tearing_down', 'failed'],
         }
 
 
 class Environment:
-    '''OpenAI enviroment emmitting bluesky plans for real measurements
+    '''OpenAI environment emitting bluesky plans for real measurements
 
     Args:
         detectors :    detectors to use in the plan
@@ -137,7 +144,7 @@ class Environment:
     It uses the motors to execute the actions requested. At each
     step it hands the motors and detectors to the per_step plan.
     From the retrieved documents reward and terminus have to be
-    extracted (see apprpriate methods which have to be
+    extracted (see appropriate methods which have to be
     overloaded below).
 
     Every time an epoc shall be reset, the reset_plan is
@@ -148,16 +155,16 @@ class Environment:
     for shutting off any devices at the end in a controlled
     fashion.
 
-    A user has to derive its own environement by overloading the
+    A user has to derive its own environment by overloading the
     following methods:
 
     * :meth:`storeInitialState`: this shall store the state the
-      environement shall be reset for every epoc. When a reset is
+      environement shall be reset for every epoch. When a reset is
       requested, the reset_plan is executed. This defaults to
       :func:`reset_plan`. It will be passed the declared detectors
       and motors.
 
-    * :meth:`getStateToResetTo`: this shall provede the info of
+    * :meth:`getStateToResetTo`: this shall provide the info of
       the reset state. ITs return value will be handed over to
       :func:`reset_plan` as `saved_state` argument.
 
@@ -167,20 +174,22 @@ class Environment:
 
     * :meth:`computeRewardTerminal`: This is called after each
       step. It must return the reward of the last step and if the
-      epoc has terminated.
+      epoch has terminated.
 
     Finally the user has to assign a
-    :class:`bcib.CallbackIteratorBridge` to the .bridge attribute.
+    :class:`bcib.CallbackIteratorBridge` to the .bridge attribute
+    unless you use
+    :func:`naus.threaded_environment.run_environment`.
     '''
     def __init__(self, *, detectors, motors, state_motors, log=None,
-                per_step_plan=per_step_plan,
-                reset_plan=reset_plan,
-                setup_plan=setup_plan,
-                teardown_plan=teardown_plan,
-                user_args=(),
-                user_kwargs={},
-                plan_bridge=None,
-                ):
+                 per_step_plan=per_step_plan,
+                 reset_plan=reset_plan,
+                 setup_plan=setup_plan,
+                 teardown_plan=teardown_plan,
+                 user_args=(),
+                 user_kwargs={},
+                 plan_bridge=None,
+    ):
 
         self.detectors = detectors
         self.motors = motors
@@ -209,7 +218,7 @@ class Environment:
     # Methods to override in a derived class
     @abstractmethod
     def storeInitialState(self, dic):
-        '''Extract the inital state read back from the device
+        '''Extract the initial state read back from the device
 
         dic :
             the dictonary as read from the devices
@@ -228,9 +237,9 @@ class Environment:
         '''State to reset environment to
 
         Typically returns the state stored by storeInitialState
-        Please note that the dic returned by storeInitialState will
-        contain much more information than just the settings of the
-        motors
+        Please note that the diconary returned by storeInitialState
+        will contain much more information than just the settings
+        of the motors
         '''
         cls_name = self.__class__.__name__
         m_name = 'getStateToResetTo'
@@ -263,7 +272,7 @@ class Environment:
         '''Compute reward and terminal from state d
 
         Args:
-            d: a dictonary containing the reuslt
+            d: a dictionary containing the result
 
         Returns:
             reward (float): The reward of the observer
@@ -287,10 +296,10 @@ class Environment:
             What must be done here?
         '''
 
-    #-------------------------------------------------------------------------
+    # -------------------------------------------------------------------------
     # Methods expected by the OpenAI solvers
     def setup(self):
-        '''Exeucte start plan and store the state
+        '''Execute start plan and store the state
 
         Will read the device and handle the output dictionary to
         :meth:`storeInitialState`.
@@ -324,20 +333,30 @@ class Environment:
         self.state.set_done()
 
     def step(self, actions):
-        """Run one timestep of the environment's dynamics.
+        """Run one time step of the environment's dynamics.
 
-        Accepts an action and returns a tuple (observation, reward, done, info).
+        Accepts an action and returns a tuple
+        (observation, reward, done, info).
 
         Args:
             action (object): An action provided by the environment.
 
         Returns:
-            observation (object): Agent's observation of the current environment.
-            reward (float) :      Amount of reward returned after previous action.
-            done (boolean):       Whether the episode has ended, in which case
-                                  further step() calls will return undefined results.
-            info (dict):          Contains auxiliary diagnostic information (helpful
-                                  for debugging, and sometimes learning).
+            observation (object): Agent's observation of the
+                                  current environment.
+
+            reward (float):       Amount of reward returned after
+                                  previous action.
+
+            done (boolean):       Whether the episode has ended,
+                                  in which case further step()
+                                  calls will return undefined
+                                  results.
+
+            info (dict):          Contains auxiliary diagnostic
+                                  information (helpful for
+                                  debugging, and sometimes
+                                  learning).
         """
 
         self.state.set_stepping()
@@ -349,13 +368,13 @@ class Environment:
                 float(actions)
                 actions = [actions]
 
-            l = len(actions)
+            la = len(actions)
             lm = len(self.motors)
 
-            if l != lm:
+            if la != lm:
                 txt = (
                     f'At each step I expect {lm} = number of motors actions'
-                    f' but got only {l} actions'
+                    f' but got only {la} actions'
                     )
                 raise AssertionError(txt)
         except Exception:
@@ -363,7 +382,8 @@ class Environment:
             self.bridge.stopDelegation()
             raise
 
-        cmd = functools.partial(self.per_step_plan, self.detectors, self.motors, actions,
+        cmd = functools.partial(self.per_step_plan, self.detectors,
+                                self.motors, actions,
                                 self.user_args, self.user_kwargs)
         self.log.debug(f'step executing command {cmd}')
         r_dic = self._submit(cmd)
@@ -385,7 +405,8 @@ class Environment:
         '''
         self.state.set_resetting()
         reset_state = self.getStateToResetTo()
-        cmd = functools.partial(self.reset_plan, self.detectors, self.state_motors, reset_state,
+        cmd = functools.partial(self.reset_plan, self.detectors,
+                                self.state_motors, reset_state,
                                 self.user_args, self.user_kwargs)
 
         # Process result
