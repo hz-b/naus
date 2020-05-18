@@ -2,7 +2,7 @@ Using naus
 ==========
 
 Using naus is considered by the author more complex than it should be.
-It dependes on the following non standard module:
+It depends on the following non standard module:
 
     * bcib
 
@@ -27,7 +27,7 @@ Typical usage for the bluesky engine is then :
 
 ::
 
-    from naus.threaded_environment import run_environement
+    from naus.threaded_environment import run_environment
     from naus.environment import Environment
     from naus.xmlrpc_server import setup_xml_server
 
@@ -40,7 +40,7 @@ Typical usage for the bluesky engine is then :
     partial = setup_xml_server(cpst)
 
     RE.log.info('Handling execution to bluesky')
-    RE(run_environement(cpst, partial, log=RE.log, n_loops=-1), cbs)
+    RE(run_environment(cpst, partial, log=RE.log, n_loops=-1), cbs)
 
 
 On the server side keras-rl has to be set up. This is not described here.
@@ -58,5 +58,5 @@ The following steps are required to be able to call to the xmlrpc server
         # make your agent calls
 
 Todo:
-    Consider if the setup of the server could be done automatically bluesky
-    run_environement
+    Consider if the setup of the server could be done automatically by the
+    bluesky compatible plan stub :func:`naus.threaded_environment.run_environment`

@@ -9,11 +9,6 @@ Module contents
     :undoc-members:
     :show-inheritance:
 
-Subpackages
------------
-
-.. toctree::
-
 
 
 Submodules
@@ -37,8 +32,8 @@ naus\.environment_proxy
     :show-inheritance:
 
 
-naus\.threaded_environment_proxy
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+naus\.threaded_environment
+~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. automodule:: naus.threaded_environment
     :members:
