@@ -3,12 +3,12 @@ matplotlib.use('Qt5Agg')
 import PyQt5
 
 import logging
-#logging.basicConfig(level='INFO')
+# logging.basicConfig(level='INFO')
 # logging.basicConfig(level='DEBUG')
 
 # from bluesky.utils import install_qt_kicker
-from naus.threaded_environment import run_environement
-from naus.environment import Environment
+from naus.threaded_environment import run_environment
+# from naus.environment import Environment
 from naus.xmlrpc_server import setup_xml_server
 
 from bluesky import RunEngine
@@ -17,16 +17,13 @@ from cart_pole_device import CartPole
 from cart_pole_environment import CartPoleEnv
 
 import matplotlib.pyplot as plt
-import xmlrpc.server
-import functools
-import numpy
 
 
 class LivePlotTest(LivePlot):
     '''
     Todo:
         Separate module
-        Learn mode level check based on a callback feeding 
+        Learn mode level check based on a callback feeding
         Info to a 'standardised device'
     '''
     def __init__(self, *args, rl_learn_state_var='cp_rl_mode', **kwargs):
@@ -43,7 +40,7 @@ def main():
 
     logger = logging.getLogger('bact2')
 
-    cart_pole = CartPole(name = 'cp')
+    cart_pole = CartPole(name='cp')
 
     RE = RunEngine({})
     # RE.log.setLevel('DEBUG')
@@ -59,9 +56,10 @@ def main():
         ax4 = ax3.twinx()
 
     cbs = [
-        LiveTable(['cp_rl_mode', 'cp_action', 'cp_x', 'cp_x_dot', 'cp_theta', 'cp_theta_dot'])
+        LiveTable(['cp_rl_mode', 'cp_action', 'cp_x', 'cp_x_dot', 'cp_theta',
+                   'cp_theta_dot'])
     ]
-    if live_plots: 
+    if live_plots:
         cbs += [
             LivePlotTest('cp_action',    color='r', linestyle='-',  ax=ax),
             LivePlotTest('cp_x',         color='b', linestyle='-',  ax=ax2),
@@ -71,15 +69,16 @@ def main():
         ]
 
     stm = [cart_pole.x, cart_pole.x_dot, cart_pole.theta, cart_pole.theta_dot]
-    cpst = CartPoleEnv(detectors=[cart_pole], motors=[cart_pole], 
-                       state_motors=stm, log=RE.log, 
-                       user_kwargs={'mode_var':cart_pole.rl_mode})
+    cpst = CartPoleEnv(detectors=[cart_pole], motors=[cart_pole],
+                       state_motors=stm, log=RE.log,
+                       user_kwargs={'mode_var': cart_pole.rl_mode})
 
     partial = setup_xml_server(cpst)
 
     RE.log.info('Handling execution to bluesky')
-    RE(run_environement(cpst, partial, log=RE.log, n_loops=-1), cbs)
+    RE(run_environment(cpst, partial, log=RE.log, n_loops=-1), cbs)
     RE.log.info('Bluesky operation finished')
+
 
 if __name__ == '__main__':
     plt.ion()
@@ -89,6 +88,3 @@ if __name__ == '__main__':
         plt.ioff()
         plt.show()
         pass
-
-
-

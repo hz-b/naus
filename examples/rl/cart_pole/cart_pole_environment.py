@@ -1,4 +1,4 @@
-from  naus.environment import Environment
+from naus.environment import Environment
 import bluesky.plan_stubs as bps
 from cart_pole_physics_model import CartPoleState
 from gym.utils import seeding
@@ -6,6 +6,7 @@ from gym import spaces
 import numpy as np
 import functools
 import copy
+
 
 def plan_set_mode(detectors, motors, state_motors, *args, **kwargs):
     print('kwargs', kwargs)
@@ -20,7 +21,6 @@ class CartPoleEnv(Environment):
     _observation_space = np.zeros((4,)) + np.nan
     _action_space = 2 # Why the hell 2?
 
-
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
@@ -33,7 +33,8 @@ class CartPoleEnv(Environment):
         # Make sure it is a known keyword argument
         kwargs['mode_var']
 
-         # Angle limit set to 2 * theta_threshold_radians so failing observation is still within bounds
+        # Angle limit set to 2 * theta_threshold_radians so failing
+        # observation is still within bounds
         high = np.array([self.x_threshold * 2,
                          np.finfo(np.float32).max,
                          self.theta_threshold_radians * 2,
@@ -44,18 +45,17 @@ class CartPoleEnv(Environment):
         self.observation_space = spaces.Box(-high, high, dtype=np.float32)
 
     def set_mode(self, mode):
-    
+
         kwargs = copy.copy(self.user_kwargs)
         # Make sure it is a known keyword argument
         kwargs['mode_var']
         # Make sure it is a known keyword argument
         kwargs['mode'] = mode
-        
+
         cmd = functools.partial(plan_set_mode, self.detectors, self.motors,
                                 self.state_motors,
                                 *self.user_args, **kwargs)
         self._submit(cmd)
-
 
     def seed(self, seed=None):
         self.np_random, seed = seeding.np_random(seed)
@@ -64,22 +64,22 @@ class CartPoleEnv(Environment):
         return r
 
     def extractState(self, dic):
-        #print('measured', dic)
 
         dets = self.detectors
         assert(len(dets) == 1)
         det = dets[0]
         det_name = det.name
         try:
-            x         = dic[f'{det_name}_x']['value']
+            x = dic[f'{det_name}_x']['value']
         except Exception:
             self.log.error(f'Extraction of {det_name_x} failed from dic {dic}')
 
-        x_dot     = dic[f'{det_name}_x_dot']['value']
-        theta     = dic[f'{det_name}_theta']['value']
+        x_dot = dic[f'{det_name}_x_dot']['value']
+        theta = dic[f'{det_name}_theta']['value']
         theta_dot = dic[f'{det_name}_theta_dot']['value']
 
-        state = CartPoleState(x=x, x_dot=x_dot, theta=theta, theta_dot=theta_dot)
+        state = CartPoleState(x=x, x_dot=x_dot, theta=theta,
+                              theta_dot=theta_dot)
         return state
 
     def storeInitialState(self, dic):
@@ -97,12 +97,12 @@ class CartPoleEnv(Environment):
         theta = state.theta
 
         if False:
-            done =  x < -self.x_threshold \
+            done = x < -self.x_threshold \
                     or x > self.x_threshold \
                     or theta < -self.theta_threshold_radians \
                     or theta > self.theta_threshold_radians
         else:
-            done =  x > self.x_threshold \
+            done = x > self.x_threshold \
                     or theta < -self.theta_threshold_radians \
                     or theta > self.theta_threshold_radians
 
@@ -119,7 +119,7 @@ class CartPoleEnv(Environment):
                 txt = (
                     """You are calling 'step()' even though this environment
  has already returned done = True. You should always call 'reset()' once you
- receive 'done = True' -- any further steps are undefined behavior."""
+ receive 'done = True' -- any further steps are undefined behaviour."""
                 )
                 self.log.warn(txt)
             self.steps_beyond_done += 1
@@ -129,4 +129,3 @@ class CartPoleEnv(Environment):
 
     def computeState(self, dic):
         return self.extractState(dic).values
-

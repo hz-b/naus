@@ -17,7 +17,6 @@ class MyServerProxy(ServerProxy):
 
 
 def main():
-    
 
     with MyServerProxy("http://localhost:8000/", verbose=True) as proxy:
         env = EnvironmentProxyForClient(proxy)
@@ -31,10 +30,11 @@ def main():
             r = env.step(.2)
             log.info(f'\nStep succeded {r}\n')
             env.done()
-            #log.info('\nDone succeded\n')
+            # log.info('\nDone succeded\n')
         finally:
             log.info('Closing Proxy')
         #    proxy.close()
+
 
 if __name__ == '__main__':
     main()
