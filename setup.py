@@ -12,12 +12,12 @@ setup(
     keywords = "keras, bluesky",
     url="https://github.com/hz-b/naus",
     packages = ['naus'],
-    
+    install_requires = ['bcib'],
     classifiers = [
         "Development Status :: 2 - Pre - Alpha",
         "Intended Audience :: Science/Research",
         "License :: OSI Approved :: GNU General Public License (GPL)",
         "Programming Language :: Python :: 3",
-        "Topic :: Scientific/Engineering :: Informatics",
+        "Topic :: Scientific/Engineering",
     ]
 )
