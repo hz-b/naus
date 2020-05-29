@@ -1,5 +1,5 @@
 import logging
-logging.basicConfig(level='DEBUG')
+# logging.basicConfig(level='DEBUG')
 
 from keras.models import Sequential
 from keras.layers import Dense, Activation, Flatten
@@ -8,14 +8,17 @@ from keras.optimizers import Adam
 from rl.agents import SARSAAgent
 from rl.policy import BoltzmannQPolicy
 
-from xmlrpc.client import ServerProxy
-from naus.environment_proxy import EnvironmentProxyForClient
+# from xmlrpc.client import ServerProxy
+# from naus.environment_proxy import EnvironmentProxyForClient
+from naus.environment_proxy_zmq import EnvironmentProxyForClient
 ENV_NAME = 'CartPole-v0'
+
+from zmq.utils.win32 import allow_interrupt
 
 # Get the environment and extract the number of actions.
 import numpy as np
 import logging
-logging.basicConfig(level='INFO')
+# logging.basicConfig(level='INFO')
 
 log = logging.getLogger('naus')
 
@@ -41,14 +44,27 @@ def run_test(actor, env, *, log=None):
     env.set_mode('test')
     actor.test(env, nb_episodes=5, visualize=False)
 
-    # Closing down 
+    # Closing down
     log.info('\nClosing down\n')
     env.done()
     log.info('\nDone succeded\n')
 
 def main():
-    with ServerProxy("http://127.0.0.1:8000/", verbose=False, allow_none=True) as proxy:
-        env = EnvironmentProxyForClient(proxy)
+    # with ServerProxy("http://127.0.0.1:8000/", verbose=False, allow_none=True) as proxy:
+    if True:
+        pass
+
+    #D:\Devel\github\keras-rl;D:\Devel\github\Devel\hz-b\naus
+    # set PYTHONPATH=D:\Devel\github\keras-rl;D:\Devel\github\Devel\hz-b\naus
+    # & python d:\Devel\github\Devel\hz-b\naus\examples\rl\cart_pole\sarsa_cartpole.py
+
+    def stop_my_application():
+        print('Stopping application')
+
+    with allow_interrupt():
+        # main polling loop.
+
+        env = EnvironmentProxyForClient(receiver=None)
         np.random.seed(1974)
         env.seed(1974)
 
