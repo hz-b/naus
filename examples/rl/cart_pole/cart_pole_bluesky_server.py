@@ -8,8 +8,8 @@ import logging
 
 # from bluesky.utils import install_qt_kicker
 from naus.threaded_environment import run_environment
-# from naus.environment import Environment
-from naus.xmlrpc_server import setup_xml_server
+from naus.environment_proxy_zmq import EnvironmentProxyForServer
+# from naus.xmlrpc_server import setup_xml_server
 
 from bluesky import RunEngine
 from bluesky.callbacks import LivePlot, LiveTable
@@ -60,7 +60,7 @@ def main():
                    'cp_theta_dot'])
     ]
     if live_plots:
-        cbs += [
+        cbs = [
             LivePlotTest('cp_action',    color='r', linestyle='-',  ax=ax),
             LivePlotTest('cp_x',         color='b', linestyle='-',  ax=ax2),
             LivePlotTest('cp_theta',     color='g', linestyle='-',  ax=ax3),
@@ -73,10 +73,15 @@ def main():
                        state_motors=stm, log=RE.log,
                        user_kwargs={'mode_var': cart_pole.rl_mode})
 
-    partial = setup_xml_server(cpst)
+    server = EnvironmentProxyForServer(receiver=cpst)
+    # partial = setup_xml_server(cpst)
+    partial = server
 
     RE.log.info('Handling execution to bluesky')
-    RE(run_environment(cpst, partial, log=RE.log, n_loops=-1), cbs)
+    RE(
+        run_environment(cpst, partial, log=RE.log, n_loops=-1)
+        #, cbs
+    )
     RE.log.info('Bluesky operation finished')
 
 
