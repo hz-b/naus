@@ -88,6 +88,8 @@ class CartPoleEnv(Environment):
 
     def getStateToResetTo(self):
         start = self.np_random.uniform(low=-0.05, high=0.05, size=(4,))
+        # should be in the reset method ...
+        self.steps_beyond_done = None
         return start
 
     def computeRewardTerminal(self, dic):
