@@ -58,9 +58,16 @@ class EnvironmentProxyForServer(_EnvironmentProxy):
         '''
         Sequences to lists
         '''
-        r = self._rec.reset(*args, **kwargs)
+        # self.log.warning(f'Resetting {args} {kwargs}')
+        try:
+            r = self._rec.reset(*args, **kwargs)
+        except Exception as exc:
+            self.log.error(f'reset failed! exception "{exc}"')
+            raise exc
+
+        # self.log.warning(f'Reset environment returned {r}')
         r = [float(x) for x in r]
-        self.log.debug(f'Reset returned {r}')
+        # self.log.warning(f'Reset returned {r}')
         return r
 
     def step(self, *args, **kwargs):
@@ -69,10 +76,10 @@ class EnvironmentProxyForServer(_EnvironmentProxy):
         '''
         r = self._rec.step(*args, **kwargs)
         state, action, done, info = r
-        self.log.debug(f'step returned unconverted {r}')
+        # self.log.debug(f'step returned unconverted {r}')
         state = [float(x) for x in state]
         r = state, action, done, info
-        self.log.debug(f'step returned {r}')
+        # self.log.debug(f'step returned {r}')
         return r
 
     # def close(self, *args, **kwargs):
@@ -92,11 +99,14 @@ class EnvironmentProxyForClient(_EnvironmentProxy):
         r = int(seed)
         return r
 
+    def setup(self):
+        return self._rec.setup()
+
     def reset(self):
         return self._rec.reset()
 
     def step(self, actions):
-        actions = int(actions)
+        actions = list(actions)
         return self._rec.step(actions)
 
     def steps_beyond_done(self, *args, **kwargs):

@@ -68,7 +68,7 @@ def time_to_expire(max_time, dt=.2, n_max=100):
 class _EnvironmentProxy:
 
     def __init__(self, receiver, *, port=9998, flags=0, copy=False, track=False,
-        log=None):
+                 max_time=10,  log=None):
         self._rec = receiver
         if log is None:
             log = logger
@@ -82,6 +82,7 @@ class _EnvironmentProxy:
         self.port = int(port)
         self.poller_in = None
         self.poller_out = None
+        self.max_time = max_time
         self._initConnection()
 
     def _initConnection(self):
@@ -145,7 +146,7 @@ class _EnvironmentProxy:
         track = self.track
         socket = self.socket
 
-        max_time = 10
+        max_time = self.max_time
         for dt in time_to_expire(max_time=max_time):
             # self.log.info(f'timeout {dt:.1f} seconds')
             events = self.poller_in.poll(timeout=dt * 1000)

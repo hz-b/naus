@@ -190,6 +190,10 @@ class Environment:
                  user_kwargs={},
                  plan_bridge=None,
     ):
+        '''
+        Todo:
+           Ensure that all motors are also in the detectors
+        '''
 
         self.detectors = detectors
         self.motors = motors
@@ -309,7 +313,7 @@ class Environment:
         cmd = functools.partial(self.setup_plan, self.detectors, self.motors,
                                 self.user_args, self.user_kwargs)
         cls_name = self.__class__.__name__
-        self.log.debug(f'{cls_name}.setup: submitting command {cmd}')
+        # self.log.debug(f'{cls_name}.setup: submitting command {cmd}')
         r = self._submit(cmd)
         self.storeInitialState(r)
         self.state.set_initialised()
@@ -384,8 +388,8 @@ class Environment:
 
         cmd = functools.partial(self.per_step_plan, self.detectors,
                                 self.motors, actions,
-                                self.user_args, self.user_kwargs)
-        self.log.debug(f'step executing command {cmd}')
+                                *self.user_args, **self.user_kwargs)
+        # self.log.debug(f'step executing command {cmd}')
         r_dic = self._submit(cmd)
 
         # Process result
@@ -405,15 +409,23 @@ class Environment:
         '''
         self.state.set_resetting()
         reset_state = self.getStateToResetTo()
+
+        assert(self.state_motors is not None)
+        assert(self.detectors is not None)
+
+        # self.log.warning(f'reset: Starting to apply plan {self.user_kwargs}')
         cmd = functools.partial(self.reset_plan, self.detectors,
                                 self.state_motors, reset_state,
-                                self.user_args, self.user_kwargs)
-
+                                *self.user_args, **self.user_kwargs)
         # Process result
         r_dic = self._submit(cmd)
+        # self.log.warning('reset: Applied plan')
 
         # Translate it to a state
+        #self.log.warning(f'reset: computing state {r_dic}')
         state = self.computeState(r_dic)
+        # self.log.warning(f'reset: computed state {state}')
+        assert(state is not None)
         self.state.set_initialised()
         return state
 
